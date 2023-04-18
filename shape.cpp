@@ -62,16 +62,28 @@ void myshape :: move(int a, int b)
     mouth.move(a, b);
 }
 
-int main() {
-    int x = -1;
-    unsigned y = 1;
-    std::cout << (x > y);
-    return 0;
-}
-
-int main01( ){
+int main(){
     setlocale(LC_ALL, "Rus");
     screen_init();
+
+//    Ошибка 1 - Перемещение за экран
+//    crossedCircle err(point(0, 0), point(10, 10));
+//    shape_refresh( );
+//    std::cout << "\n";
+//    err.move(-1, -1);
+//    shape_refresh( );
+//    std::cout << "\n";
+
+//    Ошибка 2 - Помещение за экран
+//    crossedCircle err(point(-3, 2), point(10, 5));
+//    shape_refresh( );
+//    std::cout << "\n";
+
+//    Ошибка 3 - Плохие входные точки
+    crossedCircle err(point(10, 0), point(0, 10));
+    shape_refresh( );
+    std::cout << "\n";
+
 //== 1.Объявление набора фигур ==
     rectangle hat(point(0, 0), point(14, 5));
     line brim(point(0,15),17);

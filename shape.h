@@ -5,6 +5,9 @@
 //==1. Поддержка экрана в форме матрицы символов ==
 char screen[YMAX][XMAX];
 
+
+struct errOutOfBounds {};
+
 enum color {
     black = '*',
     white = '.'
@@ -28,6 +31,8 @@ bool on_screen(int a, int b) {
 void put_point(int a, int b) {
     if (on_screen(a,b))
         screen[b] [a] = black;
+    else
+        throw errOutOfBounds();
 }
 void put_line(int x0, int y0, int x1, int y1) {
     /* Алгоритм Брезенхэма для прямой:
@@ -45,7 +50,10 @@ void put_line(int x0, int y0, int x1, int y1) {
     int xcrit = -b + two_a;
     int eps = 0;
     for (;;) { //Формирование прямой линии по точкам
-        put_point(x0, y0);
+        try{put_point(x0, y0);}
+        catch (errOutOfBounds) {
+            throw errOutOfBounds();
+        }
         if (x0 == x1 && y0 == y1) break;
         if (eps <= xcrit) x0 += dx, eps += two_b;
         if (eps >= a || a < b) y0 += dy, eps -= two_a;
@@ -135,7 +143,11 @@ private:
         for (auto i = 0; i < YMAX; i++) {
             for (auto j = 0; j < XMAX; j++) {
                 if (isCirclePath(j, i ,r))
-                    put_point(j, i);
+                    try {
+                        put_point(j, i);
+                    } catch (errOutOfBounds()) {
+                        throw errOutOfBounds();
+                    }
             }
         }
     }
@@ -143,15 +155,42 @@ protected:
 
 public:
     point upLeft, downRight;
-    crossedCircle(point up_left, point down_right) : upLeft(up_left), downRight(down_right) {}
+    crossedCircle(point up_left, point down_right) : upLeft(up_left), downRight(down_right) {
+        if (upLeft.y < downRight.y) {
+            std::swap(upLeft.y, downRight.y);
+        }
+        if (upLeft.x > downRight.y) {
+            std::swap(upLeft.x, downRight.x);
+        }
+        downLeft = point(upLeft.x, downRight.y);
+        upRight = point(downRight.x, upLeft.y);
+        middle = point((int)(downRight.x + upLeft.x)/2, (int)( downRight.y + upLeft.y )/2);
+        r = (int)(downRight.x-upLeft.x)/2;
+    }
     point downLeft = point(upLeft.x, downRight.y);
     point upRight = point(downRight.x, upLeft.y);
     point middle = point((int)(downRight.x + upLeft.x)/2, (int)( downRight.y + upLeft.y )/2);
     int r = (int)(downRight.x-upLeft.x)/2;
-    void draw() {
-        drawCircle();
-        put_line(upLeft, downRight);
-        put_line(upRight, downLeft);
+    void draw() override {
+        try {
+            drawCircle();
+            put_line(upLeft, downRight);
+            put_line(upRight, downLeft);
+        } catch (errOutOfBounds) {
+            try {
+                screen_clear();
+                put_point(middle.x, middle.y);
+                r = 1;
+                upLeft.x = 1;    upLeft.y = 1;
+                upRight.x = 1;   upRight.y = 1;
+                downLeft.x = 1;  downLeft.y = 1;
+                downRight.x = 1; downRight.y = 1;
+            } catch (errOutOfBounds) {
+
+            }
+
+        }
+
     }
     [[nodiscard]] point north() const override { return {middle.x,upLeft.y} ; };	//Точки для привязки
     [[nodiscard]] point south() const override { return {middle.x,downLeft.y} ; };
@@ -162,11 +201,23 @@ public:
     [[nodiscard]] point nwest() const override { return upLeft; };
     [[nodiscard]] point swest() const override { return downLeft; };
     void move(int a, int b) override {
-        upLeft.x += a; upLeft.y += b;
-        upRight.x += a; upRight.y += b;
-        downLeft.x += a; downLeft.y += b;
-        downRight.x += a; downRight.y += b;
-        middle.x += a; middle.y += b;
+        if (on_screen(upLeft.x + a, upLeft.y + b) && on_screen(upRight.x + a, upRight.y + b) &&
+            on_screen(downLeft.x + a, downLeft.y + b) && on_screen(downRight.x + a, downRight.y + b) &&
+            on_screen(middle.x + a, middle.y + b)) {
+                        upLeft.x += a;    upLeft.y += b;
+                        upRight.x += a;   upRight.y += b;
+                        downLeft.x += a;  downLeft.y += b;
+                        downRight.x += a; downRight.y += b;
+                        middle.x += a;    middle.y += b;
+        } else {
+
+                r = 1;
+                upLeft.x = 1;    upLeft.y = 1;
+                upRight.x = 1;   upRight.y = 1;
+                downLeft.x = 1;  downLeft.y = 1;
+                downRight.x = 1; downRight.y = 1;
+                middle.x = 1;    middle.y = 1;
+        }
     };	//Перемещение
 
     void resize(int) override {};    	//Изменение размера
